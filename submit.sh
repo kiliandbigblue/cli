@@ -1,6 +1,6 @@
 CURRENT_BRANCH=$(git branch --show-current)
 
-git push $MODE origin $CURRENT_BRANCH
+git push -f origin $CURRENT_BRANCH
 
 # Check if a PR already exists for the current branch
 PR_URL=$(gh pr view --json url --jq '.url' --state open --base main --head $CURRENT_BRANCH 2>/dev/null)
