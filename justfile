@@ -18,21 +18,21 @@ deploy: fetch-all
 # Create a new branch and commit the selected changes
 [group('git')]
 [no-cd]
-create $MODE='-i': fetch-all
+create: fetch-all
   #!/usr/bin/env sh
   ~/projects/cli/create.sh
   
 # Amend the selected changes to the current commit
 [group('git')]
 [no-cd]
-modify $MODE='-i': fetch-all
+modify: fetch-all
   #!/usr/bin/env sh
   ~/projects/cli/modify.sh
 
 # Submit a pull request with the current branch
 [group('git')]
 [no-cd]
-submit $MODE='': fetch-all
+submit: fetch-all
   #!/usr/bin/env sh
   ~/projects/cli/submit.sh
 
