@@ -26,3 +26,9 @@ create $MODE='-i': fetch-all
 modify $MODE='-i': fetch-all
   #!/usr/bin/env sh
   ~/projects/cli/modify.sh
+
+# Submit a pull request with the current branch
+[no-cd]
+submit $MODE='': fetch-all
+  #!/usr/bin/env sh
+  ~/projects/cli/submit.sh
