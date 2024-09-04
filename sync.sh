@@ -10,8 +10,9 @@ MAIN_BRANCH=$(echo $REMOTE_MAIN_BRANCH | sed 's/origin\///')
 git checkout $MAIN_BRANCH
 git pull
 
-# Delete all merged branches
-git branch --merged | grep -Ev "(^\*|master|main|dev)" | xargs git branch -d
+# Delete all merged branches and squash and merged branches
+git branch --merged $MAIN_BRANCH | grep -v "\*" | xargs -n 1 git branch -d
+git for-each-ref refs/heads/ "--format=%(refname:short)" | while read branch; do mergeBase=$(git merge-base $MAIN_BRANCH $branch) && [[ $(git cherry $MAIN_BRANCH $(git commit-tree $(git rev-parse "$branch^{tree}") -p $mergeBase -m _)) == "-"* ]] && git branch -D $branch; done
 
 # Rebase all local branches on top of the main branch, ignoring branches with rebase conflicts
 git branch --format='%(refname:short)' | grep -v "$MAIN_BRANCH" | while read branch; do
