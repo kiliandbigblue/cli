@@ -1,4 +1,4 @@
-TYPE=$(gum choose "fix" "feature" "chore")
+TYPE=$(gum choose --header "Choose branch type:" "fix" "feature" "chore")
 NAME=$(gum input --placeholder "> Branch name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
 BRANCH_NAME=$TYPE/$NAME
 
@@ -10,8 +10,8 @@ fi
 
 echo "Preparing new branch: $BRANCH_NAME"
 
-MODE=$(gum choose "Normal" "Interactive")
-if [ "$MODE" = "Interactive" ]; then
+MODE=$(gum choose --header "Choose staging mode" "--all" "--interactive")
+if [ "$MODE" = "--interactive" ]; then
     # Look for untracked files
     git status -s | grep -q '^??' && {
        gum confirm "Untracked files found. Do you want to add them to the commit?" && git add $(git status -s | grep '^??' | cut -c4-) || echo "Untracked files not added to the commit"

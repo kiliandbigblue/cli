@@ -1,5 +1,5 @@
-MODE=$(gum choose "All" "Interactive")
-if [ "$MODE" = "Interactive" ]; then
+MODE=$(gum choose --header "Choose staging mode" "--all" "--interactive")
+if [ "$MODE" = "--interactive" ]; then
     # Look for untracked files
     git status -s | grep -q '^??' && {
        gum confirm "Untracked files found. Do you want to add them to the commit?" && git add $(git status -s | grep '^??' | cut -c4-) || echo "Untracked files not added to the commit"
