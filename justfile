@@ -7,6 +7,7 @@
 [private]
 @fetch-all:
   git fetch --all
+  echo "Successfully fetched all"
 
 # Deploy a reflow or atlas service interactively 
 [group('devops')]
