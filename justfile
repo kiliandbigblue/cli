@@ -43,3 +43,22 @@ submit: fetch-all
 sync: fetch-all
   #!/usr/bin/env sh
   ~/projects/cli/sync.sh
+
+# Rebase the current branch on top of the main branch
+[group('git')]
+[no-cd]
+rebase: fetch-all
+  #!/usr/bin/env sh
+  ~/projects/cli/rebase.sh
+
+# Create a new branch, commit the selected changes, rebase on top of the main branch then submit it
+[group('git')]
+[no-cd]
+pr: fetch-all create rebase submit
+
+# Tag the current revision with a increasing -fix.X number
+[group('git')]
+[no-cd]
+tag: fetch-all
+  #!/usr/bin/env sh
+  ~/projects/cli/tag.sh
