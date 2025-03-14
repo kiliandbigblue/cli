@@ -54,9 +54,22 @@ if [ -n "$SERVICES" ]; then
     fi
 fi
 
-# URL encode the query - replace spaces, quotes, and other special characters
+# Add a newline at the end of the query as seen in the example URL
+QUERY+=$'\n'
+
+# URL encode the query
 ENCODED_QUERY=$(echo "$QUERY" | perl -MURI::Escape -ne 'print uri_escape($_)')
 
-# Forge the URL of the logs to open
-URL="https://console.cloud.google.com/logs/query;query=$ENCODED_QUERY;startTime=$(date +%s)?project=$PROJECT"
+# Get timestamps
+START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ" -d "30 minutes ago")
+
+# Add summary fields parameter for grouping by service name
+SUMMARY_FIELDS="labels%252F%2522k8s-pod%252Fapp_kubernetes_io%252Fname%2522:false:32:beginning"
+
+# Forge the URL of the logs to open with all parameters
+URL="https://console.cloud.google.com/logs/query;query=$ENCODED_QUERY;summaryFields=$SUMMARY_FIELDS;startTime=$START_TIME?project=$PROJECT&inv=1&invt=AbsAVQ"
+
+echo "🔍 Opening logs of $PROJECT multiple services in $ENV..."
+echo "Selected services: $(echo "$SERVICES" | sed "s/ /, $PREFIX/g" | sed "s/^/$PREFIX/")"
+echo "Query: $QUERY"
 open "$URL"
