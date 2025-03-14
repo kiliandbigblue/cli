@@ -16,6 +16,14 @@ deploy: fetch-all
   #!/usr/bin/env sh
   ~/projects/cli/deploy.sh
 
+# Open the logs of a reflow or atlas service interactively 
+[group('devops')]
+[no-cd]
+logs: fetch-all
+  #!/usr/bin/env sh
+  ~/projects/cli/logs.sh
+
+
 # Create a new branch and commit the selected changes
 [group('git')]
 [no-cd]
