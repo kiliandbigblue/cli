@@ -12,7 +12,7 @@
 # Deploy a reflow or atlas service interactively 
 [group('devops')]
 [no-cd]
-deploy: fetch-all
+deploy:
   #!/usr/bin/env sh
   ~/projects/cli/deploy.sh
 
