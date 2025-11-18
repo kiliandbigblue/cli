@@ -1,34 +1,45 @@
-# Determine the root directory of the current Git repository (if any)
-ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+#!/bin/bash
 
-if [ -n "$ROOT" ]; then
-    REPO_NAME=$(basename "$ROOT")
-    TITLE=$(echo "$REPO_NAME" | tr '[a-z]' '[A-Z]')
+DEFAULT_REFLOW_REPO_PATH=~/projects/reflow
+DEFAULT_ATLAS_REPO_PATH=~/projects/atlas
+DEFAULT_VOYAGER_REPO_PATH=~/projects/voyager
+# Use the default path or read from ENV variables
+INTERNAL_REFLOW_REPO_PATH=${REFLOW_REPO_PATH:-$DEFAULT_REFLOW_REPO_PATH}
+INTERNAL_ATLAS_REPO_PATH=${ATLAS_REPO_PATH:-$DEFAULT_ATLAS_REPO_PATH}
+INTERNAL_VOYAGER_REPO_PATH=${VOYAGER_REPO_PATH:-$DEFAULT_VOYAGER_REPO_PATH}
 
-    # comment the line below if you don't want to see the spinner
-    # gum spin --spinner globe --title "$TITLE deployment 🚀. Commencing countdown, engines on..." -- sleep 1 
-    
-    # Set deployment environment and project based on the repository name
-    case "$REPO_NAME" in
-        "reflow")
-            ENV="prod"
-            SERVICES=($(ls "$ROOT/deploy/kubernetes/bigblue/services" | sed -E 's/.yaml//' | gum filter --no-limit --placeholder "reflow service(s) to deploy (tab to select multiple, enter to confirm)..."))
-            PROJECT="bigblue"
-            ;;
-        "atlas")``
-            ENV=$(gum choose --header "Choose deployment environment" prod staging)
-            SERVICES=($(ls "$ROOT/tools/k8s/base/services" | sed -E 's/.yaml//' | gum filter --no-limit --placeholder "atlas service(s) to deploy (tab to select multiple, enter to confirm)..."))
-            PROJECT="atlas"
-            ;;
-        *)
-            echo "🚚 Please run this script directly in reflow or atlas repository."
-            exit 1
-            ;;
-    esac
-else
-    echo "🚚 Please run this script directly in reflow or atlas repository."
-    exit 1
-fi
+# Prompt for repository selection
+REPO_NAME=$(gum choose --header "Choose repository" reflow atlas voyager)
+TITLE=$(echo "$REPO_NAME" | tr '[a-z]' '[A-Z]')
+
+# comment the line below if you don't want to see the spinner
+# gum spin --spinner globe --title "$TITLE deployment 🚀. Commencing countdown, engines on..." -- sleep 1 
+
+# Set deployment environment and project based on the repository name
+case "$REPO_NAME" in
+    "reflow")
+        ENV="prod"
+        SERVICES=($(ls "$INTERNAL_REFLOW_REPO_PATH/deploy/kubernetes/bigblue/services" | sed -E 's/.yaml//' | grep -v "^voyager-" | gum filter --no-limit --placeholder "reflow service(s) to deploy (tab to select multiple, enter to confirm)..."))
+        PROJECT="bigblue"
+        TAG_REPO="$INTERNAL_REFLOW_REPO_PATH"
+        ;;
+    "atlas")
+        ENV=$(gum choose --header "Choose deployment environment" prod staging)
+        SERVICES=($(ls "$INTERNAL_ATLAS_REPO_PATH/tools/k8s/base/services" | sed -E 's/.yaml//' | gum filter --no-limit --placeholder "atlas service(s) to deploy (tab to select multiple, enter to confirm)..."))
+        PROJECT="atlas"
+        TAG_REPO="$INTERNAL_ATLAS_REPO_PATH"
+        ;;
+    "voyager")
+        ENV="prod"
+        SERVICES=($(ls "$INTERNAL_REFLOW_REPO_PATH/deploy/kubernetes/bigblue/services" | sed -E 's/.yaml//' | grep "^voyager-" | gum filter --no-limit --placeholder "voyager service(s) to deploy (tab to select multiple, enter to confirm)..."))
+        PROJECT="bigblue"
+        TAG_REPO="$INTERNAL_VOYAGER_REPO_PATH"
+        ;;
+    *)
+        echo "🚚 Invalid repository selection."
+        exit 1
+        ;;
+esac
 
 # Check if any services were selected
 if [ ${#SERVICES[@]} -eq 0 ]; then
@@ -36,8 +47,8 @@ if [ ${#SERVICES[@]} -eq 0 ]; then
     exit 1
 fi
 
-# Determine the version to deploy
-VERSION=$(git tag -l --sort=-creatordate | gum filter --placeholder "version to deploy...")
+# Determine the version to deploy from the appropriate repository
+VERSION=$(cd "$TAG_REPO" && git tag -l --sort=-creatordate | gum filter --placeholder "version to deploy...")
 
 # Choose deployment mode
 MODE=$(gum choose --header "Choose deployment mode" Normal Force)
