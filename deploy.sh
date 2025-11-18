@@ -12,12 +12,12 @@ if [ -n "$ROOT" ]; then
     case "$REPO_NAME" in
         "reflow")
             ENV="prod"
-            SERVICE=$(ls "$ROOT/deploy/kubernetes/bigblue/services" | sed -E 's/.yaml//' | gum filter --placeholder "reflow service to deploy...")
+            SERVICES=($(ls "$ROOT/deploy/kubernetes/bigblue/services" | sed -E 's/.yaml//' | gum filter --no-limit --placeholder "reflow service(s) to deploy (tab to select multiple, enter to confirm)..."))
             PROJECT="bigblue"
             ;;
         "atlas")``
             ENV=$(gum choose --header "Choose deployment environment" prod staging)
-            SERVICE=$(ls "$ROOT/tools/k8s/base/services" | sed -E 's/.yaml//' | gum filter --placeholder "atlas service to deploy...")
+            SERVICES=($(ls "$ROOT/tools/k8s/base/services" | sed -E 's/.yaml//' | gum filter --no-limit --placeholder "atlas service(s) to deploy (tab to select multiple, enter to confirm)..."))
             PROJECT="atlas"
             ;;
         *)
@@ -30,34 +30,69 @@ else
     exit 1
 fi
 
+# Check if any services were selected
+if [ ${#SERVICES[@]} -eq 0 ]; then
+    echo "🙅 No services selected. Aborted."
+    exit 1
+fi
+
 # Determine the version to deploy
 VERSION=$(git tag -l --sort=-creatordate | gum filter --placeholder "version to deploy...")
 
 # Choose deployment mode
 MODE=$(gum choose --header "Choose deployment mode" Normal Force)
 
+# Show selected services and confirm
+echo "Selected services:"
+for SERVICE in "${SERVICES[@]}"; do
+    echo "  - $SERVICE"
+done
+
 # Confirm the deployment with the chosen settings
-if ! gum confirm "Deploy $PROJECT $SERVICE:$VERSION to $ENV (mode: $MODE)?"; then
+SERVICE_LIST=$(printf ", %s" "${SERVICES[@]}")
+SERVICE_LIST=${SERVICE_LIST:2}  # Remove leading ", "
+if ! gum confirm "Deploy $PROJECT [$SERVICE_LIST]:$VERSION to $ENV (mode: $MODE)?"; then
     echo "🙅 Aborted"
     exit 1
 fi
-echo "🚀 Deploying $PROJECT $SERVICE:$VERSION to $ENV (mode: $MODE)..."
 
-# Deploy based on the chosen mode
-if [ "$MODE" == "Normal" ]; then
-    DEPLOYMENT_OUTPUT=$(~/go/bin/just deploy $PROJECT $ENV $SERVICE $VERSION 2>&1 | tee /dev/tty)
-elif [ "$MODE" == "Force" ]; then
-    DEPLOYMENT_OUTPUT=$(~/go/bin/just deploy --force $PROJECT $ENV  $SERVICE $VERSION 2>&1 | tee /dev/tty)
-fi
+# Deploy each service sequentially
+DEPLOYMENT_RESULTS=()
+for SERVICE in "${SERVICES[@]}"; do
+    echo ""
+    echo "🚀 Deploying $PROJECT $SERVICE:$VERSION to $ENV (mode: $MODE)..."
+    
+    # Deploy based on the chosen mode
+    if [ "$MODE" == "Normal" ]; then
+        DEPLOYMENT_OUTPUT=$(~/go/bin/just deploy $PROJECT $ENV $SERVICE $VERSION 2>&1 | tee /dev/tty)
+    elif [ "$MODE" == "Force" ]; then
+        DEPLOYMENT_OUTPUT=$(~/go/bin/just deploy --force $PROJECT $ENV $SERVICE $VERSION 2>&1 | tee /dev/tty)
+    fi
+    
+    # Check deployment result
+    if echo "$DEPLOYMENT_OUTPUT" | grep -q "Error:"; then
+        echo "❌ $SERVICE deployment failed."
+        DEPLOYMENT_RESULTS+=("❌ $SERVICE - deployment failed")
+    elif echo "$DEPLOYMENT_OUTPUT" | grep -q "already deployed"; then
+        echo "🤷 $SERVICE skipped. $SERVICE:$VERSION is already deployed."
+        DEPLOYMENT_RESULTS+=("🤷 $SERVICE - already deployed")
+    else
+        PREVIOUS_VERSION=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'Current image:.*' | grep -o 'v.*')
+        echo "✅ $SERVICE deployed successfully. Previous version: $PREVIOUS_VERSION"
+        DEPLOYMENT_RESULTS+=("✅ $SERVICE - deployed (was $PREVIOUS_VERSION)")
+    fi
+done
 
-# Check deployment result and copy the deployment status to clipboard if successful.
-if echo "$DEPLOYMENT_OUTPUT" | grep -q "Error:"; then
-    echo "❌ Deployment failed."
-elif echo "$DEPLOYMENT_OUTPUT" | grep -q "already deployed"; then
-    echo "🤷 Skipped. $SERVICE:$VERSION is already deployed."
-else
-    PREVIOUS_VERSION=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'Current image:.*' | grep -o 'v.*')
-    echo "🛰️ Deployed. Previous version is $PREVIOUS_VERSION" | pbcopy
-    echo "✅ Deployed. You can paste the deployment status to Slack."
-fi
+# Summary
+echo ""
+echo "📊 Deployment Summary:"
+for RESULT in "${DEPLOYMENT_RESULTS[@]}"; do
+    echo "  $RESULT"
+done
+
+# Copy summary to clipboard
+SUMMARY=$(printf "%s\n" "${DEPLOYMENT_RESULTS[@]}")
+echo "$SUMMARY" | pbcopy
+echo ""
+echo "📋 Summary copied to clipboard. You can paste it to Slack."
 
