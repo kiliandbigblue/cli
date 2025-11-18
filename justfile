@@ -23,6 +23,13 @@ logs:
   #!/usr/bin/env sh
   ~/projects/cli/logs.sh
 
+# Restart a reflow or atlas service interactively 
+[group('devops')]
+[no-cd]
+restart:
+  #!/usr/bin/env sh
+  ~/projects/cli/restart.sh
+
 # Submit a pull request with the current branch
 [group('git')]
 [no-cd]
