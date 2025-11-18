@@ -32,7 +32,7 @@ case "$REPO_NAME" in
             NAMESPACE="atlas-staging"
         fi
         CONTEXT="gke_bigblue-atlas-prod_europe-west1_atlas-primary"
-        SERVICE="bigblue-$SERVICE"
+        SERVICE="atlas-$SERVICE"
         ;;
     "voyager")
         ENV="prod"
