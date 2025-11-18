@@ -31,7 +31,7 @@ chmod +x *.sh
 
 ## Commands
 
-All commands are accessible through the `just` command runner. Run `just` to see the full list of available commands.
+All commands are accessible through the `just` command runner. Run `just --justfile ~/projects/cli/justfile ` to see the full list of available commands.
 
 ### DevOps Commands
 
